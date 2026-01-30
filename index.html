@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>Trust Gain | Admin Control</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --gold: #FFD700; 
+            --gold-dark: #B8860B;
+            --bg-dark: #020202; 
+            --surface: rgba(20, 20, 20, 0.85);
+            --border: rgba(255, 215, 0, 0.15); 
+        }
+        
+        body { 
+            background: var(--bg-dark); 
+            color: #fff; 
+            font-family: 'Poppins', sans-serif; 
+            min-height: 100vh;
+            background-image: radial-gradient(circle at top right, rgba(255, 215, 0, 0.07), transparent 40%);
+        }
+
+        .gold-gradient-text { 
+            background: linear-gradient(135deg, #FFF5B7 0%, #FFD700 50%, #B8860B 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            font-family: 'Orbitron', sans-serif; 
+        }
+
+        .glass-panel { 
+            background: var(--surface); 
+            backdrop-filter: blur(25px); 
+            border: 1px solid var(--border); 
+            border-radius: 24px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        .admin-input { 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(255, 215, 0, 0.1); 
+            color: white; 
+            padding: 14px; 
+            border-radius: 14px; 
+            outline: none; 
+            width: 100%;
+            transition: 0.3s;
+            font-size: 13px;
+        }
+        .admin-input:focus { border-color: var(--gold); background: rgba(255, 255, 255, 0.06); }
+
+        .btn-elite { 
+            background: linear-gradient(45deg, #B8860B, #FFD700); 
+            color: black; 
+            font-weight: 900; 
+            padding: 16px 24px; 
+            border-radius: 16px; 
+            text-transform: uppercase; 
+            font-size: 11px;
+            letter-spacing: 2px;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .tab-btn { 
+            padding: 16px 20px; 
+            font-size: 10px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            color: #555; 
+            border-bottom: 2px solid transparent;
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        .table-container { 
+            overflow-x: auto; 
+            scrollbar-width: thin;
+        }
+        
+        ::-webkit-scrollbar { height: 4px; width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 10px; }
+
+        .user-row:hover { background: rgba(255, 215, 0, 0.02); }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+<!-- Login Screen -->
+<div id="login-screen" class="fixed inset-0 bg-[#020202] z-[9999] flex items-center justify-center hidden">
+    <div class="glass-panel p-10 w-full max-w-md text-center">
+        <i class="fas fa-user-shield text-3xl gold-gradient-text mb-6"></i>
+        <h2 class="text-2xl font-black gold-gradient-text mb-8 tracking-tighter">MASTER ACCESS</h2>
+        <input type="password" id="admin-pass" placeholder="Enter Command Key" class="admin-input text-center">
+        <button onclick="adminLogin()" class="btn-elite w-full mt-6">Authorize Control</button>
+    </div>
+</div>
+
+<!-- Main UI -->
+<div id="admin-ui" class="max-w-6xl mx-auto hidden">
+    <header class="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+        <div>
+            <span class="text-yellow-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 block">🌟 System Root 🌟</span>
+            <h1 class="text-4xl font-black gold-gradient-text">COMMAND CENTER</h1>
+        </div>
+        <div class="stats-grid grid grid-cols-3 gap-4 w-full md:w-auto">
+            <div class="glass-panel px-6 py-4 text-center">
+                <span id="total-users" class="text-xl font-bold">0</span>
+                <p class="text-[8px] text-gray-500 font-black uppercase">Members</p>
+            </div>
+            <div class="glass-panel px-6 py-4 text-center">
+                <span id="pending-withdraws" class="text-xl font-bold text-red-500">0</span>
+                <p class="text-[8px] text-gray-500 font-black uppercase">Pending</p>
+            </div>
+            <div onclick="handleLogout()" class="glass-panel flex items-center justify-center px-4 cursor-pointer text-gray-600">
+                <i class="fas fa-power-off"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex border-b border-white/5 mb-10 overflow-x-auto no-scrollbar">
+        <button onclick="switchTab('tab-settings')" class="tab-btn active" id="btn-tab-settings">Parameters</button>
+        <button onclick="switchTab('tab-withdrawals')" class="tab-btn" id="btn-tab-withdrawals">Financials</button>
+        <button onclick="switchTab('tab-tasks')" class="tab-btn" id="btn-tab-tasks">Task Matrix</button>
+        <button onclick="switchTab('tab-users')" class="tab-btn" id="btn-tab-users">User Vault</button>
+    </div>
+
+    <!-- Parameters & System Control -->
+    <div id="tab-settings" class="tab-content space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="glass-panel p-8">
+                <h3 class="text-[10px] font-black gold-gradient-text uppercase mb-8 tracking-[0.3em]">System Control & Economics</h3>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">App Status</label>
+                            <select id="set-app-status" class="admin-input mt-1">
+                                <option value="online">ONLINE</option>
+                                <option value="maintenance">MAINTENANCE (OFF)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">Total Task Units</label>
+                            <input type="number" id="set-task-count" class="admin-input mt-1">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-gray-500 uppercase font-bold">Maintenance Message</label>
+                        <input type="text" id="set-maintenance-msg" class="admin-input mt-1">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">Task Reward (৳)</label>
+                            <input type="number" id="set-task-reward" class="admin-input mt-1">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">Bonus Reward (৳)</label>
+                            <input type="number" id="set-ad-reward" class="admin-input mt-1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-panel p-8">
+                <h3 class="text-[10px] font-black gold-gradient-text uppercase mb-8 tracking-[0.3em]">Social & Communication</h3>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">YouTube Link</label>
+                            <input type="text" id="set-yt-link" class="admin-input mt-1">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-gray-500 uppercase font-bold">Telegram Link</label>
+                            <input type="text" id="set-tg-link" class="admin-input mt-1">
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white/5 rounded-xl space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="set-notice-active" class="h-4 w-4 accent-yellow-500">
+                            <span class="text-[10px] uppercase font-bold">Activate App Notice</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-gray-500 uppercase font-bold">Notice Title</label>
+                        <input type="text" id="set-notice-title" class="admin-input mt-1">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-gray-500 uppercase font-bold">Notice Text</label>
+                        <textarea id="set-notice-text" class="admin-input mt-1 h-16 text-[11px]"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button onclick="saveGlobalSettings()" class="btn-elite w-full py-6">Deploy All Parameters</button>
+    </div>
+
+    <!-- Withdrawals -->
+    <div id="tab-withdrawals" class="tab-content hidden">
+        <div class="glass-panel table-container">
+            <table class="w-full text-left text-[11px]">
+                <thead class="bg-white/5 text-gray-500 uppercase tracking-widest">
+                    <tr><th class="p-6">Member</th><th class="p-6">Amount</th><th class="p-6">Method/Number</th><th class="p-6 text-right">Action</th></tr>
+                </thead>
+                <tbody id="withdraw-list" class="divide-y divide-white/5"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Task Matrix -->
+    <div id="tab-tasks" class="tab-content hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass-panel p-8 h-fit sticky top-10">
+                <h3 class="text-[10px] font-black gold-gradient-text uppercase mb-6">Edit Unit</h3>
+                <div class="space-y-4">
+                    <select id="task-selector" onchange="loadTaskDetails()" class="admin-input text-yellow-500 font-bold"></select>
+                    <input type="text" id="task-link" class="admin-input" placeholder="Task Link">
+                    <input type="text" id="task-code" class="admin-input" placeholder="Verify Code">
+                    <button onclick="saveTaskDetails()" class="btn-elite w-full">Save Unit</button>
+                </div>
+            </div>
+            <div class="md:col-span-2 glass-panel table-container max-h-[70vh]">
+                <table class="w-full text-[10px] text-left">
+                    <thead class="bg-white/5 sticky top-0 text-gray-500 uppercase font-black">
+                        <tr><th class="p-5">Unit</th><th class="p-5">Security</th><th class="p-5">Code</th></tr>
+                    </thead>
+                    <tbody id="task-table-body" class="divide-y divide-white/5"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Vault (Updated to show all users) -->
+    <div id="tab-users" class="tab-content hidden">
+        <div class="glass-panel p-6 mb-6 flex justify-between items-center">
+            <h3 class="text-[10px] font-black gold-gradient-text uppercase tracking-[0.3em]">Registered Asset Holders</h3>
+            <input type="text" id="user-search-filter" oninput="filterUserTable()" placeholder="Search by Email..." class="admin-input !w-64 !py-2">
+        </div>
+        <div class="glass-panel table-container max-h-[60vh]">
+            <table class="w-full text-[11px] text-left">
+                <thead class="bg-white/5 sticky top-0 text-gray-500 uppercase font-black">
+                    <tr>
+                        <th class="p-5">Member Email</th>
+                        <th class="p-5">Password</th>
+                        <th class="p-5">Balance (৳)</th>
+                        <th class="p-5 text-right">Control</th>
+                    </tr>
+                </thead>
+                <tbody id="user-vault-body" class="divide-y divide-white/5"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, updateDoc, collection, query, getDocs, deleteDoc, orderBy, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCIXm_8gXbAQiqK-iog_jtd7o6EiozL9oA",
+        authDomain: "trustgain-9c1e9.firebaseapp.com",
+        projectId: "trustgain-9c1e9",
+        storageBucket: "trustgain-9c1e9.firebasestorage.app",
+        messagingSenderId: "320806460423",
+        appId: "1:320806460423:web:f75fe40dbe575128ecdea2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const ADMIN_EMAIL = "sabbirsir.com@gmail.com";
+
+    let globalSettings = {};
+
+    onAuthStateChanged(auth, (user) => {
+        if (user && user.email === ADMIN_EMAIL) {
+            document.getElementById('admin-ui').classList.remove('hidden');
+            document.getElementById('login-screen').classList.add('hidden');
+            startSystem();
+        } else {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('admin-ui').classList.add('hidden');
+        }
+    });
+
+    window.adminLogin = async () => {
+        const pass = document.getElementById('admin-pass').value;
+        try { await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pass); } 
+        catch (e) { Swal.fire('Denied', 'Invalid Master Key', 'error'); }
+    };
+
+    function startSystem() {
+        loadGlobalSettings();
+        syncStats();
+        loadWithdrawals();
+        loadUserVault();
+    }
+
+    function syncStats() {
+        getDocs(collection(db, "users")).then(s => document.getElementById('total-users').innerText = s.size);
+        onSnapshot(collection(db, "withdraws"), s => document.getElementById('pending-withdraws').innerText = s.size);
+    }
+
+    function loadGlobalSettings() {
+        onSnapshot(doc(db, "admin", "settings"), (s) => {
+            if(s.exists()) {
+                globalSettings = s.data();
+                document.getElementById('set-app-status').value = globalSettings.appStatus || 'online';
+                document.getElementById('set-maintenance-msg').value = globalSettings.maintenanceMsg || '';
+                document.getElementById('set-task-count').value = globalSettings.taskCount || 0;
+                document.getElementById('set-task-reward').value = globalSettings.taskReward || 0;
+                document.getElementById('set-ad-reward').value = globalSettings.adReward || 0;
+                document.getElementById('set-yt-link').value = globalSettings.ytLink || '';
+                document.getElementById('set-tg-link').value = globalSettings.tgLink || '';
+                document.getElementById('set-notice-title').value = globalSettings.noticeTitle || '';
+                document.getElementById('set-notice-text').value = globalSettings.noticeText || '';
+                document.getElementById('set-notice-active').checked = globalSettings.noticeActive || false;
+                setupTaskSelector(globalSettings.taskCount || 0);
+                renderTaskTable(globalSettings.taskCount || 0);
+            }
+        });
+    }
+
+    window.saveGlobalSettings = async () => {
+        const data = {
+            appStatus: document.getElementById('set-app-status').value,
+            maintenanceMsg: document.getElementById('set-maintenance-msg').value,
+            taskCount: parseInt(document.getElementById('set-task-count').value) || 0,
+            taskReward: parseFloat(document.getElementById('set-task-reward').value) || 0,
+            adReward: parseFloat(document.getElementById('set-ad-reward').value) || 0,
+            ytLink: document.getElementById('set-yt-link').value,
+            tgLink: document.getElementById('set-tg-link').value,
+            noticeTitle: document.getElementById('set-notice-title').value,
+            noticeText: document.getElementById('set-notice-text').value,
+            noticeActive: document.getElementById('set-notice-active').checked
+        };
+        await setDoc(doc(db, "admin", "settings"), data, {merge: true});
+        Swal.fire('Updated', 'System Parameters Synced', 'success');
+    };
+
+    // User Vault Loading
+    async function loadUserVault() {
+        onSnapshot(collection(db, "users"), (snapshot) => {
+            const body = document.getElementById('user-vault-body');
+            body.innerHTML = "";
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const email = doc.id;
+                body.innerHTML += `
+                    <tr class="user-row divide-x divide-white/5">
+                        <td class="p-4 font-bold text-gray-300">${email}</td>
+                        <td class="p-4 font-mono text-yellow-500/50">${data.password || '••••••••'}</td>
+                        <td class="p-4 font-black gold-gradient-text text-sm">${data.balance.toFixed(2)}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="editUserBalance('${email}', ${data.balance})" class="bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-md hover:bg-yellow-500 hover:text-black transition text-[9px] font-bold">EDIT BALANCE</button>
+                        </td>
+                    </tr>`;
+            });
+        });
+    }
+
+    window.editUserBalance = async (email, current) => {
+        const { value: newBal } = await Swal.fire({
+            title: 'Adjust Assets',
+            text: `Current Balance: ${current}৳`,
+            input: 'number',
+            inputPlaceholder: 'Enter new balance amount',
+            background: '#0a0a0a',
+            color: '#fff',
+            confirmButtonColor: '#FFD700',
+            confirmButtonText: 'Update Now'
+        });
+
+        if (newBal !== null && newBal !== "") {
+            try {
+                await updateDoc(doc(db, "users", email), { balance: parseFloat(newBal) });
+                toast('Assets Updated', 'success');
+            } catch (e) { toast('Update Failed', 'error'); }
+        }
+    };
+
+    window.filterUserTable = () => {
+        const filter = document.getElementById('user-search-filter').value.toLowerCase();
+        const rows = document.querySelectorAll('#user-vault-body tr');
+        rows.forEach(row => {
+            const email = row.cells[0].textContent.toLowerCase();
+            row.style.display = email.includes(filter) ? "" : "none";
+        });
+    };
+
+    // Task & Logic Functions
+    function setupTaskSelector(count) {
+        const sel = document.getElementById('task-selector');
+        sel.innerHTML = `<option value="">Select Unit</option>`;
+        for(let i=1; i<=count; i++) sel.innerHTML += `<option value="${i}">UNIT #${i}</option>`;
+    }
+
+    window.loadTaskDetails = () => {
+        const id = document.getElementById('task-selector').value;
+        if(!id) return;
+        document.getElementById('task-link').value = globalSettings[`task${id}_link`] || '';
+        document.getElementById('task-code').value = globalSettings[`task${id}_code`] || '';
+    };
+
+    window.saveTaskDetails = async () => {
+        const id = document.getElementById('task-selector').value;
+        if(!id) return;
+        await setDoc(doc(db, "admin", "settings"), {
+            [`task${id}_link`]: document.getElementById('task-link').value,
+            [`task${id}_code`]: document.getElementById('task-code').value
+        }, {merge: true});
+        Swal.fire('Success', `Unit #${id} Configured`, 'success');
+    };
+
+    function renderTaskTable(count) {
+        const body = document.getElementById('task-table-body');
+        body.innerHTML = "";
+        for(let i=1; i<=count; i++) {
+            const code = globalSettings[`task${i}_code`];
+            body.innerHTML += `<tr class="hover:bg-white/5"><td class="p-5">#${i}</td><td class="p-5">${code ? 'LOCKED' : 'OPEN'}</td><td class="p-5">${code || '---'}</td></tr>`;
+        }
+    }
+
+    window.loadWithdrawals = () => {
+        onSnapshot(query(collection(db, "withdraws"), orderBy("timestamp", "desc")), s => {
+            const list = document.getElementById('withdraw-list');
+            list.innerHTML = "";
+            s.forEach(d => {
+                const data = d.data();
+                list.innerHTML += `<tr><td class="p-6">${data.email}</td><td class="p-6">${data.requested}৳</td><td class="p-6">${data.method}</td><td class="p-6 text-right">
+                    <button onclick="processWithdraw('${d.id}', 'approve')" class="p-2 text-green-500"><i class="fas fa-check"></i></button>
+                    <button onclick="processWithdraw('${d.id}', 'reject', '${data.email}', ${data.requested})" class="p-2 text-red-500"><i class="fas fa-times"></i></button>
+                </td></tr>`;
+            });
+        });
+    };
+
+    window.processWithdraw = async (id, action, email, amt) => {
+        if(confirm(`Confirm ${action}?`)) {
+            if(action === 'reject') await updateDoc(doc(db, "users", email), { balance: increment(amt) });
+            await deleteDoc(doc(db, "withdraws", id));
+        }
+    };
+
+    window.switchTab = (id) => {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById('btn-' + id).classList.add('active');
+    };
+
+    window.handleLogout = () => signOut(auth);
+    function toast(msg, icon) { Swal.fire({ text: msg, icon: icon, toast: true, position: 'top', showConfirmButton: false, timer: 3000, background: '#111', color: '#fff' }); }
+</script>
+</body>
+</html>
